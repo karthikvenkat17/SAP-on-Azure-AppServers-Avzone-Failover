@@ -1,5 +1,6 @@
 #/bin/bash
-## Trigger Azure automation runbook 
+## Author : Karthik Venkatraman
+## Trigger Azure automation runbook from pacemaker alert agent
 ## crm config:  alert email-alert "/usr/share/pacemaker/alerts/email-alert.sh" 
 set -x
 resource=$(crm resource status |grep -i Hana|sed -n -e '/\[[^]]/s/^[^[]*\[\([^]]*\)].*$/\1/p'|tail -1)

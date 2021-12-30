@@ -25,7 +25,7 @@ echo "{"\"ClusterType"\":"\"$ClusterType"\","\"SAPSystemId"\":"\"$SAPSystemId"\"
   
 ## Trigger automation runbook
 
-jobid=$(curl -d "@/tmp/ha-alert.$CRM_alert_timestamp.json" -X POST https://39d3c850-6f4b-485b-b2af-dbe2dace8008.webhook.ne.azure-automation.net/webhooks?token=CIUFIRwA%2fqrTbKET7MZvDWQ9IqBREP%2fjWWgBTAoIBSs%3d)
+jobid=$(curl -d "@/tmp/ha-alert.$CRM_alert_timestamp.json" -X POST https://xxx.webhook.xx.azure-automation.net/webhooks?token=xxxxxx
 
 echo "SAP resource $CRM_alert_rsc has migrated at $CRM_alert_timestamp " > /tmp/ha-alert.$CRM_alert_timestamp 
 
@@ -37,9 +37,6 @@ echo "Resource $CRM_alert_rsc reported action of \"$CRM_alert_task\""  >> /tmp/h
   crm_mon -1 >> /tmp/ha-alert.$CRM_alert_timestamp
 
 echo "Automation runbook with $jobid scheduled"
-
-#  sender=$(hostname)
-#  mail -s "$sid $app Migrated at $time" -r $sender user@xyz.com < /tmp/ha-alert.$CRM_alert_timestamp
 
 fi
 fi

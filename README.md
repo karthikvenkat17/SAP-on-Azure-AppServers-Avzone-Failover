@@ -11,11 +11,11 @@ For SAP deployments on Azure using Availability zones, one of the architecture p
 - SAP Database tier is running on Linux with HA configured across Availability Zones using Pacemaker. If database tier is on Windows 
 - Zone which hosts the passive node of the database has equal number of SAP application servers (as active Zone) built, configured (logon groups, batch groups, message server ACLs etc.) and shutdown. 
 - The runbook leverages the [SAP Start Stop Automation Framework](https://github.com/Azure/SAP-on-Azure-Scripts-and-Utilities/tree/main/Start-Stop-Automation/Automation-Backend). Hence all Application servers need to have 3 mandatory tags mentioned below 
-    | Tag | Explanation |
-   | --- | --- |
-  | SAPSystemSID | SID of SAP application | 
-  | SAPApplicationInstanceType  | SAP_D (which signifies Dialog instances) |
-  | SAPApplicationInstanceNumber | Instance number of SAP app server |
+    | Tag | Explanation | Example |
+   | --- | --- | --- |
+  | SAPSystemSID | SID of SAP application | SBX | 
+  | SAPApplicationInstanceType  | SAP_D or SAP_DVEBMGS (which signifies Dialog instances) | SAP_D |
+  | SAPApplicationInstanceNumber | Instance number of SAP app server | 00 |
 
 - Azure VM Name and hostname need to be identical. If these are different modify the runbooks accordingly.
 - Code assumes that the database SID and application server SID are identical. If these are different modify the runbooks accordingly.  
@@ -24,7 +24,9 @@ For SAP deployments on Azure using Availability zones, one of the architecture p
 
 ***runbook-trigger.sh*** 
 - This shell script will be used by the Alert agent of the Pacemaker cluster.  
-- The script checks if the alert task is for a database node being **Promoted**. If this is the case it calls the **webhook** of an Azure automation runbook passing values of Promoted VM, Demoted VM, SAP database SID. If not no action is taken
+- The script checks if the alert task is for a database node being **Promoted**. If yes actions mentioned below is carried out. If not no action is taken. 
+- If CRM_alert_task contains **Promote**, the script creates a JSON file in the /tmp directory with values of Cluster type (not used currently in processing), Promoted VM, Demoted VM, SAP database SID. 
+- Once the JSON file is created, the script does a POST of the JSON file to the **webhook** url of an Azure automation runbook using cURL. 
 
 ***Switch-SAPApplicationServers.ps1***
 - This runbook takes the following parameters as inputs
@@ -36,7 +38,7 @@ For SAP deployments on Azure using Availability zones, one of the architecture p
 | automationRG | Specifies the resource group of the automation account |
 | runbookName | Specifies the name of this runbook. Used to check job concurrency |
 | SAPApplicationServerWaitTime | Time to wait in Seconds when starting the SAP application Servers |
-| SAPSoftShutdownTimeInSeconds | Softshutdown timeout used for stopping SAP application servers on the passive Zone |
+| SAPSoftShutdownTimeInSeconds | Softshutdown timeout in seconds used for stopping SAP application servers on the passive Zone |
 | jobMaxRuntimeInSeconds | Max runtime for the job in seconds. |
 
 - The runbook initially fetches the Zone details of Promoted and Demoted database VMs using the Get-AzVM command. 
@@ -46,4 +48,24 @@ For SAP deployments on Azure using Availability zones, one of the architecture p
 -  Next step is to stop application servers on the newly Demoted AvZone. This is done by calling runbook Stop-SAPApplicationServer.ps1 using child jobs similar to above. 
 
 ## Implementation Steps
-- 
+- Create an automation account and Import **Switch-SAPApplicationServers.ps1** runbook into your automation account.  Runbook can be imported using the source as Github. 
+- Import the powershell module SAPAzurePowerShellModules from the Powershell gallery into your Automation account. See [here](https://github.com/Azure/SAP-on-Azure-Scripts-and-Utilities/tree/main/Start-Stop-Automation/Automation-Backend#import-sap-powershell-module) for details. 
+- Import runbooks **Start-SAPApplicationServer** and **Stop-SAPApplicationServer** into your automation account. These runbooks use RunAsAccount for authentication whereas the main runbook uses System-assigned Managed Identity for authentication. Comment the lines for authentication using RunAsAccount in these 2 runbooks and add code to use system-assigned managed identity as shown below.  Alternately create a RunAsAccount within the Automation Account.  
+
+```
+# Connect to Azure
+#$connection = Get-AutomationConnection -Name AzureRunAsConnection
+#Add-AzAccount  -ServicePrincipal -Tenant $connection.TenantID -ApplicationId $connection.ApplicationID -CertificateThumbprint $connection.CertificateThumbprint 
+
+# Ensures you do not inherit an AzContext in your runbook
+Disable-AzContextAutosave -Scope Process
+# Connect to Azure with system-assigned managed identity
+$AzureContext = (Connect-AzAccount -Identity).context
+$AzureContext = Set-AzContext -SubscriptionName $AzureContext.Subscription -DefaultProfile $AzureContext
+Write-Output "Working on subscription $($AzureContext.Subscription) and tenant $($AzureContext.Tenant)"
+```
+- Your Automation account should now have 3 runbooks in published state.
+- The managed identity associated with the automation account needs access to read VM properties of the DB and app server VMs, stop/start app server VMs, Invoke commands on the application servers using Invoke-AzVMRunCommand.
+- To trigger action from pacemaker, create a webhook for Switch-SAPApplicationServers.ps1 runbook.  Populate all parameters for the runbook at the time of creation of webhook except WEBHOOKDATA. WEBHOOKDATA will be passed by pacemaker alert agent script.  For Production secure the webhook using Private Endpoint.
+- Login to the database VMs and place the runbook-trigger.sh shell script in the same path in both the VMs. Ensure that **hacluster** user can execute the script and can also write files to the /tmp directory.
+-  Execute a failover.  You should see a JSON 

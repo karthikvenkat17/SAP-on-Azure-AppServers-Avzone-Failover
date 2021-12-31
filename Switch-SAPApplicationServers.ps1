@@ -51,6 +51,10 @@ param(
 
 
 #Set-PSDebug -Trace 2
+
+function Get-TimeStamp {    
+    return "[{0:dd/MM/yy} {0:HH:mm:ss}]" -f (Get-Date)
+}
 function Get-SAPAppInfoByZones {
     [CmdletBinding()]
     param (
@@ -138,11 +142,19 @@ function Get-SAPAutomationJobStatus {
                     Write-Information "Job $($jobDetail.JobID) didnt finish successfully. Check child runbook for errors"
                     }          
                 }
-            return $jobList
+            $failedJobs = $jobList | Where-Object {$_.Status -eq "NotSuccess"}
+                if ($failedJobs.count -gt 0){
+                    Write-Output "$(Get-TimeStamp) Some of the jobs failed. AvZone switch could not be completed successfully"
+                    Write-Output $jobList
+                    exit 1
+                }
+                else {
+                return $jobList
+                }
         }
         catch {
             Write-Output  $_.Exception.Message
-            Write-Output "Job status could not be found" 
+            Write-Output "$(Get-TimeStamp) Job status could not be found" 
             exit 1
         }
     }
@@ -194,7 +206,7 @@ elseif (-Not $WebhookData.RequestBody) {
 
 $promotedVMDetails = Get-AzVM -Name $requestparams.PromotedNode
 $demotedVMDetails = Get-AzVM -Name $requestparams.DemotedNode
-Write-Output "SAP HANA databse for $($requestparams.SAPSystemId) failed over"
+Write-Output "$(Get-TimeStamp) SAP HANA databse for $($requestparams.SAPSystemId) failed over"
 Write-Output "$($demotedVMDetails.Name) running Zone $($demotedVMDetails.Zones) switched to $($promotedVMDetails.Name) running Zone $($promotedVMDetails.Zones)"
 Write-Output ""
 
@@ -213,9 +225,20 @@ Write-Output "Application servers to be stopped running in Zone $($demotedVMDeta
 Write-Output $demotedZoneAppServers
 Write-Output ""
 
+Write-Output "Check if there are enough snoozed app servers avaialble in Promoted Zone"
+if (($promotedZoneAppServers.count -eq 0) -or ($promotedZoneAppServers.count -lt $demotedZoneAppServers.count)){
+    Write-Output "Application servers switch cannot be performed. Not enough snoozed app servers available"
+    exit 1
+}
+else {
+    Write-Output "App Server count in Promoted Node -> ($($promotedZoneAppServers.count)"
+    Write-Output "App Server count in Demoted Node -> ($($demotedZoneAppServers.count)"
+    Write-Output "Proceeding with the switch"
+}
+
 #Start/Stop SAP Application Server
 try {
-    Write-Output "Starting application servers"
+    Write-Output "$(Get-TimeStamp) Starting application servers in Promoted Zone"
     ForEach ($appServerPromote in $promotedZoneAppServers) {
         $promoteJobParams = @{ResourceGroupName = $appServerPromote.appVMRGName;VMName = $appServerPromote.appVMName;SAPApplicationServerWaitTime = $SAPApplicationServerWaitTime}
         Write-Output $promoteJobParams
@@ -230,27 +253,27 @@ try {
             Status = "Initiated"
         })
     }
-    Write-Output "Jobs scheduled to start Application Servers"
+    Write-Output "$(Get-TimeStamp) Jobs scheduled to start Application Servers"
     Write-Output $startJobList
     
     Write-Output "Checking status of the application servers start jobs. Wait for completion"
     $startJobList = Get-SAPAutomationJobStatus -jobList $startJobList `
                                                -automationAccount  $automationAccount `
                                                -automationRG $automationRG
-    Write-Output "Final output of jobs"
+    Write-Output "$(Get-TimeStamp) Final output of jobs"
     Write-Output $startJobList
 }
 
 catch {
 
     Write-Output  $_.Exception.Message
-    Write-Output "Application servers could not be started. AvZone switch cannot be performed. See previous erros"
+    Write-Output "$(Get-TimeStamp) Application servers in passive zone could not be started. AvZone switch cannot be performed. See previous erros"
     exit 1
 }
 
 try{
-    Write-Output "Ensure minimum number of app servers will be honoured before stopping"
-
+    #Write-Output "Ensure minimum number of app servers will be honoured before stopping"
+    Write-Output "$(Get-TimeStamp) Stopping application servers in Demoted Zone"
     foreach ($appServerDemote in $demotedZoneAppServers) {
         $demoteJobParams = @{ResourceGroupName = $appServerDemote.appVMRGName;VMName = $appServerDemote.appVMName;SAPSoftShutdownTimeInSeconds = $SAPSoftShutdownTimeInSeconds}
         Write-Output $demoteJobParams
@@ -265,19 +288,18 @@ try{
                         Status = "Initiated"
                         })
     }
-    Write-Output "Jobs scheduled to stop application servers"
+    Write-Output "$(Get-TimeStamp) Jobs scheduled to stop application servers"
     Write-Output $stopJobList
     Write-Output "Check status of the application servers stop jobs. Wait for completion"
     $stopJobList = Get-SAPAutomationJobStatus -jobList $stopJobList `
                                                -automationAccount  $automationAccount `
                                                -automationRG $automationRG
-    Write-Output "Final output of jobs"
+    Write-Output "$(Get-TimeStamp) Final output of jobs"
     Write-Output $stopJobList
-
 }
 catch {
 
     Write-Output  $_.Exception.Message
-    Write-Output "Application servers could not be stopped. AvZone switch cannot be performed. See previous erros"
+    Write-Output "$(Get-TimeStamp) Application servers could not be stopped. AvZone switch cannot be performed. See previous erros"
     exit 1
 }

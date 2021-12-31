@@ -207,7 +207,7 @@ elseif (-Not $WebhookData.RequestBody) {
 $promotedVMDetails = Get-AzVM -Name $requestparams.PromotedNode
 $demotedVMDetails = Get-AzVM -Name $requestparams.DemotedNode
 Write-Output "$(Get-TimeStamp) SAP HANA databse for $($requestparams.SAPSystemId) failed over"
-Write-Output "$($demotedVMDetails.Name) running Zone $($demotedVMDetails.Zones) switched to $($promotedVMDetails.Name) running Zone $($promotedVMDetails.Zones)"
+Write-Output " HANA database running in node $($demotedVMDetails.Name) in Zone $($demotedVMDetails.Zones) switched to node $($promotedVMDetails.Name) running in Zone $($promotedVMDetails.Zones)"
 Write-Output ""
 
 

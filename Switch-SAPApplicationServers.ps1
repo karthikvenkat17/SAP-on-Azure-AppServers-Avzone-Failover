@@ -231,8 +231,8 @@ if (($promotedZoneAppServers.count -eq 0) -or ($promotedZoneAppServers.count -lt
     exit 1
 }
 else {
-    Write-Output "App Server count in Promoted Node -> ($($promotedZoneAppServers.count)"
-    Write-Output "App Server count in Demoted Node -> ($($demotedZoneAppServers.count)"
+    Write-Output "App Server count in Promoted Zone -> $($promotedZoneAppServers.count)"
+    Write-Output "App Server count in Demoted Zone -> $($demotedZoneAppServers.count)"
     Write-Output "Proceeding with the switch"
 }
 

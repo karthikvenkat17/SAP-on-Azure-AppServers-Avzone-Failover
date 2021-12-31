@@ -172,11 +172,9 @@ $jobs = Get-AzAutomationJob -ResourceGroupName $automationRG `
     -RunbookName $runbookName `
     -DefaultProfile $AzureContext
 
-# Check to see if it is already running
 $runningCount = ($jobs.Where( { $_.Status -eq 'Running' })).count
 
 if (($jobs.Status -contains 'Running' -and $runningCount -gt 1 ) -or ($jobs.Status -eq 'New')) {
-    # Exit code
     Write-Output "Runbook $runbookName is already running"
     exit 1
 }
@@ -197,7 +195,7 @@ elseif (-Not $WebhookData.RequestBody) {
 $promotedVMDetails = Get-AzVM -Name $requestparams.PromotedNode
 $demotedVMDetails = Get-AzVM -Name $requestparams.DemotedNode
 Write-Output "SAP HANA databse for $($requestparams.SAPSystemId) failed over"
-Write-Output "$($demotedVMDetails.Name) running Zone $($demotedVMDetails.Zones)  -> $($promotedVMDetails.Name) running Zone $($promotedVMDetails.Zones)"
+Write-Output "$($demotedVMDetails.Name) running Zone $($demotedVMDetails.Zones) switched to $($promotedVMDetails.Name) running Zone $($promotedVMDetails.Zones)"
 Write-Output ""
 
 

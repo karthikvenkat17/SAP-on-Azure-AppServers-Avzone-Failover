@@ -1,13 +1,13 @@
 <#
 .SYNOPSIS
-   Used to switch SAP application servers from passive Zone to active with respect to SAP database in an Active/Passive setup.  
+   Used to switch SAP application servers from passive Zone to active Zone with respect to SAP database in an Active/Passive setup.  
 
 .DESCRIPTION
-    Runbook triggered by a webhook from Pacemaker cluster, this runbook Starts SAP app servers in the same 
-    zone as Promoted Node of the database and stops SAP app servers in the Zone where passive node of the database is located.  
+    Runbook Starts SAP app servers in the same zone as Promoted Node of the database and stops SAP app servers in the Zone where 
+    passive node of the database is located. Runbook can be triggered by a webhook from Pacemaker cluster,   
 
 .PARAMETER WebhookData
-    JSON with details of the switchover alert. Sample JSON shown below
+    JSON with details of the switchover. Sample JSON shown below
     {"ClusterType":"HANA","SAPSystemId":"ABC","PromotedNode":"xxxxxx","DemotedNode":"xxxxxx"}
 
 .PARAMETER automationAccount

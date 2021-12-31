@@ -1,2 +1,2 @@
 # sap-avzone-failover
-SAP Application server switch framework for Zonal deployment
+SAP Application server switch framework for Zonal deployment.

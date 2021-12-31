@@ -1,8 +1,12 @@
 #/bin/bash
 ## Author : Karthik Venkatraman
+<<<<<<< HEAD
 ## Trigger Azure automation runbook from alert agent
+=======
+## Trigger Azure automation runbook from pacemaker alert agent
+>>>>>>> 2618ddedfd59b45522e8640bb028c1666d684c3b
 ## crm config:  alert email-alert "/usr/share/pacemaker/alerts/email-alert.sh" 
-set -x
+#set -x
 resource=$(crm resource status |grep -i Hana|sed -n -e '/\[[^]]/s/^[^[]*\[\([^]]*\)].*$/\1/p'|tail -1)
 if [ -z "$resource" ];then
   echo "SAP HANA database resource not found"
@@ -26,7 +30,11 @@ echo "{"\"ClusterType"\":"\"$ClusterType"\","\"SAPSystemId"\":"\"$SAPSystemId"\"
   
 ## Trigger automation runbook
 
+<<<<<<< HEAD
 jobid=$(curl -d "@/tmp/ha-alert.$CRM_alert_timestamp.json" -X POST https://xxxx.xx.azure-automation.net/webhooks?token=xxxxx
+=======
+jobid=$(curl -d "@/tmp/ha-alert.$CRM_alert_timestamp.json" -X POST https://xxx.webhook.xx.azure-automation.net/webhooks?token=xxxxxx
+>>>>>>> 2618ddedfd59b45522e8640bb028c1666d684c3b
 
 echo "SAP resource $CRM_alert_rsc has migrated at $CRM_alert_timestamp " > /tmp/ha-alert.$CRM_alert_timestamp 
 
@@ -38,9 +46,6 @@ echo "Resource $CRM_alert_rsc reported action of \"$CRM_alert_task\""  >> /tmp/h
   crm_mon -1 >> /tmp/ha-alert.$CRM_alert_timestamp
 
 echo "Automation runbook with $jobid scheduled"
-
-#  sender=$(hostname)
-#  mail -s "$sid $app Migrated at $time" -r $sender user@xyz.com < /tmp/ha-alert.$CRM_alert_timestamp
 
 fi
 fi

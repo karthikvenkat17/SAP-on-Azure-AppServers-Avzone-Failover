@@ -7,7 +7,7 @@
     zone as Promoted Node of the database and stops SAP app servers in the Zone where passive node of the database is located.  
 
 .PARAMETER WebhookData
-    JSON file with details of the switchover alert. Sample JSON file shown below
+    JSON with details of the switchover alert. Sample JSON shown below
     {"ClusterType":"HANA","SAPSystemId":"ABC","PromotedNode":"xxxxxx","DemotedNode":"xxxxxx"}
 
 .PARAMETER automationAccount

@@ -8,7 +8,7 @@ For SAP deployments on Azure using Availability zones, one of the architecture p
 
 ## Pre-Requisites
 - You have an SAP application deployed across Availability Zones in Active/Passive setup as described [here](https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-ha-availability-zones#activepassive-deployment)
-- SAP Database tier is running on Linux with HA configured across Availability Zones using Pacemaker. If database tier is on Windows 
+- SAP Database tier is running on Linux with HA configured across Availability Zones using Pacemaker. If database tier is on Windows or not using Pacemaker Cluster (For example Oracle dataguard) a differnt trigger mechanism need to be used in place of Pacemaker Alert agent. Runbook can still be used for Application server switch.
 - Zone which hosts the passive node of the database has equal number of SAP application servers (as active Zone) built, configured (logon groups, batch groups, message server ACLs etc.) and shutdown. 
 - The runbook leverages the [SAP Start Stop Automation Framework](https://github.com/Azure/SAP-on-Azure-Scripts-and-Utilities/tree/main/Start-Stop-Automation/Automation-Backend). Hence all Application servers need to have 3 mandatory tags mentioned below 
     | Tag | Explanation | Example |
@@ -48,15 +48,20 @@ For SAP deployments on Azure using Availability zones, one of the architecture p
 -  Next step is to stop application servers on the newly Demoted AvZone. This is done by calling runbook Stop-SAPApplicationServer.ps1 using child jobs similar to above. 
 
 ## Implementation Steps
-- Create an automation account and Import **Switch-SAPApplicationServers.ps1** runbook into your automation account.  Runbook can be imported using the source as Github. 
+- Create an automation account and Import **Switch-SAPApplicationServers** runbook into your automation account.  Runbook can be imported using the source as Github and searching for the repo name. Use the powershell runtime version as 5.1.
+
+![github import](images/github_import_ps.jpg)
+
 - Import the powershell module SAPAzurePowerShellModules from the Powershell gallery into your Automation account. See [here](https://github.com/Azure/SAP-on-Azure-Scripts-and-Utilities/tree/main/Start-Stop-Automation/Automation-Backend#import-sap-powershell-module) for details. 
 - Import runbooks **Start-SAPApplicationServer** and **Stop-SAPApplicationServer** into your automation account. These runbooks use RunAsAccount for authentication whereas the main runbook uses System-assigned Managed Identity for authentication. Comment the lines for authentication using RunAsAccount in these 2 runbooks and add code to use system-assigned managed identity as shown below.  Alternately create a RunAsAccount within the Automation Account.  
 
+**Comment the below lines**
 ```
-# Connect to Azure
 #$connection = Get-AutomationConnection -Name AzureRunAsConnection
 #Add-AzAccount  -ServicePrincipal -Tenant $connection.TenantID -ApplicationId $connection.ApplicationID -CertificateThumbprint $connection.CertificateThumbprint 
-
+```
+**Add the below lines for system assigned managed identity authentication**
+```
 # Ensures you do not inherit an AzContext in your runbook
 Disable-AzContextAutosave -Scope Process
 # Connect to Azure with system-assigned managed identity
@@ -65,7 +70,14 @@ $AzureContext = Set-AzContext -SubscriptionName $AzureContext.Subscription -Defa
 Write-Output "Working on subscription $($AzureContext.Subscription) and tenant $($AzureContext.Tenant)"
 ```
 - Your Automation account should now have 3 runbooks in published state.
-- The managed identity associated with the automation account needs access to read VM properties of the DB and app server VMs, stop/start app server VMs, Invoke commands on the application servers using Invoke-AzVMRunCommand.
-- To trigger action from pacemaker, create a webhook for Switch-SAPApplicationServers.ps1 runbook.  Populate all parameters for the runbook at the time of creation of webhook except WEBHOOKDATA. WEBHOOKDATA will be passed by pacemaker alert agent script.  For Production secure the webhook using Private Endpoint.
+
+![automation account runbooks](images/automation_account_runbooks.jpg)
+
+- The managed identity associated with the automation account needs access to read VM properties of the DB and app server VMs, stop/start app server VMs, Invoke commands on the application servers using Invoke-AzVMRunCommand. Add role assignments which provides these authorizations.
+- To trigger the runbook from pacemaker cluster, create a webhook for main runbook **Switch-SAPApplicationServers**.  Populate all parameters for the runbook at the time of creation of webhook except WEBHOOKDATA. WEBHOOKDATA will be passed by pacemaker alert agent script. 
+- Secure the webhook using **Private Endpoint**.  Run a test of the webhook using POSTMAN or a similar tool. 
 - Logon to the database VMs and place the runbook-trigger.sh shell script in the same path in both the VMs. Ensure that **hacluster** user can execute the script and can also write files to the /tmp directory.
--  Execute a failover of the database.  You should see that the alert was triggered and runbook was started using the webhook.  Output of the alert agent script and JSON file can be found in the /tmp directory
+- Update the shell script to use the webhook url created in the previous step.
+-  Create an alert agent resource on the pacemaker. Below is an example screenshot from SUSE using CRM command.
+![pacemaker alert](images/pacemaker_alert.jpg)
+-  Execute a failover of the database.  You should see that the alert gets triggered and runbook is started using the webhook.  Output of the alert agent script and JSON file can be found in the /tmp directory. Check the logs of runbook to ensure switchover behaves as expected.

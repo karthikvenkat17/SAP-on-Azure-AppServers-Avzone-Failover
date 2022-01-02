@@ -47,6 +47,7 @@ For SAP deployments on Azure using Availability zones, one of the architecture p
 -  We now wait for all jobs to come to a Terminal state. If all jobs Complete successfully we move to the next step. If any of the job fails we exit. 
 -  Next step is to stop application servers on the newly Demoted AvZone. This is done by calling runbook Stop-SAPApplicationServer.ps1 using child jobs similar to above. 
 
+
 ## Implementation Steps
 - Create an automation account and Import **Switch-SAPApplicationServers** runbook into your automation account.  Runbook can be imported using the source as Github and searching for the repo name. Use the powershell runtime version as 5.1.
 
@@ -81,3 +82,7 @@ Write-Output "Working on subscription $($AzureContext.Subscription) and tenant $
 -  Create an alert agent resource on the pacemaker. Below is an example screenshot from SUSE using CRM command.
 ![pacemaker alert](images/pacemaker_alert.jpg)
 -  Execute a failover of the database.  You should see that the alert gets triggered and runbook is started using the webhook.  Output of the alert agent script and JSON file can be found in the /tmp directory. Check the logs of runbook to ensure switchover behaves as expected.
+-  If the alerts are not getting fired during failover verify the script location, permissions and alert config. If everything is fine check /var/log/messages for possible errors.
+
+## Disclaimer
+This is just a prototype to demonstrate how to automate switching of SAP application servers between Availability Zones. The approach and the code needs to be thoroughly tested and modified as per requirements before it can be deployed in a productive SAP environment. 

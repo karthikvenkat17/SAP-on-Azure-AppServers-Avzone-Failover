@@ -17,7 +17,7 @@ For SAP deployments on Azure using Availability zones, one of the architecture p
   | SAPApplicationInstanceType  | SAP_D or SAP_DVEBMGS (which signifies Dialog instances) | SAP_D |
   | SAPApplicationInstanceNumber | Instance number of SAP app server | 00 |
 
-- Azure VM Name and hostname need to be identical. If these are different modify the runbooks accordingly.
+- Code assumes that Azure VM Name and hostname are identical. If these are different modify the runbooks accordingly.
 - Code assumes that the database SID and application server SID are identical. If these are different modify the runbooks accordingly.  
 
 ## Code Walkthrough
@@ -67,5 +67,5 @@ Write-Output "Working on subscription $($AzureContext.Subscription) and tenant $
 - Your Automation account should now have 3 runbooks in published state.
 - The managed identity associated with the automation account needs access to read VM properties of the DB and app server VMs, stop/start app server VMs, Invoke commands on the application servers using Invoke-AzVMRunCommand.
 - To trigger action from pacemaker, create a webhook for Switch-SAPApplicationServers.ps1 runbook.  Populate all parameters for the runbook at the time of creation of webhook except WEBHOOKDATA. WEBHOOKDATA will be passed by pacemaker alert agent script.  For Production secure the webhook using Private Endpoint.
-- Login to the database VMs and place the runbook-trigger.sh shell script in the same path in both the VMs. Ensure that **hacluster** user can execute the script and can also write files to the /tmp directory.
--  Execute a failover.  You should see a JSON 
+- Logon to the database VMs and place the runbook-trigger.sh shell script in the same path in both the VMs. Ensure that **hacluster** user can execute the script and can also write files to the /tmp directory.
+-  Execute a failover of the database.  You should see that the alert was triggered and runbook was started using the webhook.  Output of the alert agent script and JSON file can be found in the /tmp directory

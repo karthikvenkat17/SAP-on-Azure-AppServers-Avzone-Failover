@@ -85,4 +85,4 @@ Write-Output "Working on subscription $($AzureContext.Subscription) and tenant $
 -  If the alerts are not getting fired during failover verify the script location, permissions and alert config. If everything is fine check /var/log/messages for possible errors.
 
 ## Disclaimer
-This is just a prototype to demonstrate how to automate switching of SAP application servers between Availability Zones. The approach and the code needs to be thoroughly tested and modified as per requirements before it can be deployed in a productive SAP environment. 
+This is just a prototype to demonstrate how to automate switching of SAP application servers between Availability Zones. The approach and the code needs to be thoroughly tested and validated before it can be used in a productive SAP environment. 

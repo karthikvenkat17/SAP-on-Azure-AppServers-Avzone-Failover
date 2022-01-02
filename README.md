@@ -8,9 +8,9 @@ For SAP deployments on Azure using Availability zones, one of the architecture p
 
 ## Pre-Requisites
 - You have an SAP application deployed across Availability Zones in Active/Passive setup as described [here](https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-ha-availability-zones#activepassive-deployment)
-- SAP Database tier is running on Linux with HA configured across Availability Zones using Pacemaker. If database tier is on Windows or not using Pacemaker Cluster (For example Oracle dataguard) a differnt trigger mechanism need to be used in place of Pacemaker Alert agent. Runbook can still be used for Application server switch.
+- SAP Database tier is running on Linux with HA configured across Availability Zones using Pacemaker. If database tier is on Windows or not using Pacemaker Cluster (For example Oracle dataguard) a different trigger mechanism need to be used in place of Pacemaker Alert agent. Runbook can still be used for Application server switch.
 - Zone which hosts the passive node of the database has equal number of SAP application servers (as active Zone) built, configured (logon groups, batch groups, message server ACLs etc.) and shutdown. 
-- The runbook leverages the [SAP Start Stop Automation Framework](https://github.com/Azure/SAP-on-Azure-Scripts-and-Utilities/tree/main/Start-Stop-Automation/Automation-Backend). Hence all Application servers need to have 3 mandatory tags mentioned below 
+- The main runbook in this repo **Switch-SAPApplicationServers** leverages the [SAP Start Stop Automation Framework](https://github.com/Azure/SAP-on-Azure-Scripts-and-Utilities/tree/main/Start-Stop-Automation/Automation-Backend). Hence all Application servers need to have 3 mandatory tags mentioned below 
     | Tag | Explanation | Example |
    | --- | --- | --- |
   | SAPSystemSID | SID of SAP application | SBX | 
@@ -73,7 +73,7 @@ Write-Output "Working on subscription $($AzureContext.Subscription) and tenant $
 
 ![automation account runbooks](images/automation_account_runbooks.jpg)
 
-- The managed identity associated with the automation account needs access to read VM properties of the DB and app server VMs, stop/start app server VMs, Invoke commands on the application servers using Invoke-AzVMRunCommand. Add role assignments which provides these authorizations.
+- The managed identity associated with the automation account needs access to check status of jobs in the automation account, read VM properties of the DB and app server VMs, stop/start app server VMs, invoke OS commands on the application servers using Invoke-AzVMRunCommand. Add role assignments which provides these authorizations.
 - To trigger the runbook from pacemaker cluster, create a webhook for main runbook **Switch-SAPApplicationServers**.  Populate all parameters for the runbook at the time of creation of webhook except WEBHOOKDATA. WEBHOOKDATA will be passed by pacemaker alert agent script. 
 - Secure the webhook using **Private Endpoint**.  Run a test of the webhook using POSTMAN or a similar tool. 
 - Logon to the database VMs and place the runbook-trigger.sh shell script in the same path in both the VMs. Ensure that **hacluster** user can execute the script and can also write files to the /tmp directory.

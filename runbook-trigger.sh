@@ -2,7 +2,7 @@
 ## Author : Karthik Venkatraman
 ## Trigger Azure automation runbook from pacemaker alert agent. 
 ## Replace the URL in cURL command to the webhook of your automation runbook. 
-## crm config:  alert email-alert "/usr/share/pacemaker/alerts/email-alert.sh" 
+## crm config:  alert hanadb-failover "/usr/share/pacemaker/alerts/runbook-trigger.sh" 
 
 resource=$(crm resource status |grep -i Hana|sed -n -e '/\[[^]]/s/^[^[]*\[\([^]]*\)].*$/\1/p'|tail -1)
 if [ -z "$resource" ];then
@@ -27,7 +27,7 @@ echo "{"\"ClusterType"\":"\"$ClusterType"\","\"SAPSystemId"\":"\"$SAPSystemId"\"
   
 ## Trigger automation runbook
 
-jobid=$(curl -d "@/tmp/ha-alert.$CRM_alert_timestamp.json" -X POST https://xxx.webhook.xx.azure-automation.net/webhooks?token=xxxxxx
+jobid=$(curl -d "@/tmp/ha-alert.$CRM_alert_timestamp.json" -X POST https://xxx.webhook.xx.azure-automation.net/webhooks?token=xxxxxx)
 
 echo "SAP resource $CRM_alert_rsc has migrated at $CRM_alert_timestamp " > /tmp/ha-alert.$CRM_alert_timestamp 
 
